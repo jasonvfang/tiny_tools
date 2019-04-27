@@ -6,11 +6,13 @@ import (
 
 const (
 	ToolVersion = "v0.1"
-	RootOtaDirName = "sgw_avs"
+	PackTargetName = "sgw_avs"
+	RootOtaDirNam = PackTargetName
 	CmbsPrefixString = "Alexa_DCX81_MOD_"
 	HandsetPrefixString = "AXH01H"
 	BaseKernelPrefixString = "boot.img."	
 	BaseRootfsPrefixString = "rootfs.img."
+	ScriptName = "update.sh"
 
 	ConfigCmbsImgDir = "release/cmbs/"
 	ConfigHandsetImgDir = "release/handset/"
@@ -26,6 +28,11 @@ const (
 	HelperToolRsaFile = "helper/tools/rsa_file_x86"
 	GenVersionScript = "gen_version.sh"
 
+	HelperAESKeyFile = "helper/ota_key/aes.key"
+	HelperRsaPrivateKeyFile = "helper/ota_key/rsa_2048_private.key"
+	HelperRsaPublicKeyFile = "helper/ota_key/rsa_2048_pub.key"
+
+	ReleaseLinkplaySdkVerFile = "release/linkplaySdk/MVver"
 )
 
 

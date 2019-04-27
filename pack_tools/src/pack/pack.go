@@ -24,7 +24,7 @@ func createDirectory(dirPath string) error {
 
 
 func Prepare() {
-	log.Println("1.Please enter the build Region (US | EU):")
+	log.Println("1.Please enter the build Region (US | EU | AU):")
 	fmt.Scanln(&Region)
 
 	log.Println("2.Please enter the build release(45 etc):")
@@ -106,7 +106,7 @@ func ExecuteSystemCommand(cmdString string) bool {
 func CreateDirectoryPerRegion(){
 	var otaDirPath string
 
-	otaDirPath = RootOtaDirName + "/"
+	otaDirPath = RootOtaDirNam + "/"
 	
 	os.RemoveAll(otaDirPath)
 
@@ -268,7 +268,110 @@ func GenerateVersionFile() {
 }
 
 
+func DoPreImagePack() bool {
+	var tmpFileName string 
+	var tmpFileType string 
+
+	files, err:= GetFileListFromDir(DstOtaPkgPath)
+
+	if err != nil {
+		log.Println("get dirlist failed!")
+		return false
+	}
+
+    for _, f := range files {
+    	
+        if strings.HasPrefix(f.Name(), CmbsPrefixString) {
+        	log.Println("Pre-Pack-->",f.Name())
+        	tmpFileName = f.Name()
+        	tmpFileType = "cmbs"
+        }else if strings.Contains(f.Name(), HandsetPrefixString){
+        	log.Println("Pre-Pack-->",f.Name())
+        	tmpFileName = f.Name()
+        	tmpFileType = "handset"
+        }else if strings.HasPrefix(f.Name(), BaseKernelPrefixString) {
+        	log.Println("Pre-Pack-->",f.Name())
+        	tmpFileName = f.Name()
+        	tmpFileType = "boot"
+        }else if strings.HasPrefix(f.Name(), BaseRootfsPrefixString) {
+        	log.Println("Pre-Pack-->",f.Name())
+        	tmpFileName = f.Name()
+        	tmpFileType = "rootfs"
+        }else if strings.HasPrefix(f.Name(), ScriptName) {
+        	log.Println("Pre-Pack-->",f.Name())
+        	tmpFileName = f.Name()
+        	tmpFileType = "script"
+        }else {
+        	continue
+        }               
+
+        if tmpFileType != "" && tmpFileName != "" {
+        	
+        	outPackedFileName := DstOtaPkgPath + "/" + tmpFileName + "_packed"
+
+        	cmdString := HelperToolPackImg + " " + PackTargetName + " " + tmpFileType + " " + DstOtaPkgPath + "/" + tmpFileName + " " + outPackedFileName	
+        	log.Println(cmdString)
+			succ := ExecuteSystemCommand(cmdString)
+			if succ != true {
+				log.Println(cmdString, "Failed")
+				return false
+			}        	
+
+			cmdString = HelperToolOpenSSL + " " + "enc -e -aes-128-cbc -kfile " + HelperAESKeyFile + " -in " + outPackedFileName + " -out " + DstOtaPkgPath + "/" + tmpFileName
+			log.Println(cmdString)
+			succ = ExecuteSystemCommand(cmdString)
+			if succ != true {
+				log.Println(cmdString, "Failed")
+				return false
+			}   
+
+			cmdString = "rm -rf " + outPackedFileName
+			log.Println(cmdString)
+			succ = ExecuteSystemCommand(cmdString)
+			if succ != true {
+				log.Println(cmdString, "Failed")
+				return false
+			}   			
+        }	
+
+        //reset strings
+        tmpFileName = ""
+        tmpFileType = ""
+        fmt.Println();
+    }
+
+    //Generate MD5 
+    cmdString := "cd " + DstOtaPkgPath + ";" + "md5sum * > md5.txt"
+	log.Println(cmdString)
+	succ := ExecuteSystemCommand(cmdString)
+	if succ != true {
+		log.Println(cmdString, "Failed")
+		return false
+	}   		
+	
+	cmdString = "cp -fr " + ReleaseLinkplaySdkVerFile + " " + DstOtaPkgPath
+	log.Println(cmdString)
+	succ = ExecuteSystemCommand(cmdString)
+	if succ != true {
+		log.Println(cmdString, "Failed")
+		return false
+	}  
+
+	return true
+}
+
+
 func GenerateProductXML(){
+
+}
+
+
+func DoPostImagePack(){
+
+}
+
+
+func DoFinallyFileZip(){
 
 }
 
@@ -279,10 +382,16 @@ func DoPack() {
 	CreateDirectoryPerRegion()
 
 	CopyFiles()
-
-	GenerateVersionFile()
 	
+	GenerateVersionFile()
+
+	DoPreImagePack()
+
 	GenerateProductXML()
+	
+	DoPostImagePack()
+
+	DoFinallyFileZip()
 }
 
 
