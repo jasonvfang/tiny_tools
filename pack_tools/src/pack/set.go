@@ -33,6 +33,16 @@ const (
 	HelperRsaPublicKeyFile = "helper/ota_key/rsa_2048_pub.key"
 
 	ReleaseLinkplaySdkVerFile = "release/linkplaySdk/MVver"
+	PackageProductionXmlFile = "product_orig.xml"
+	PackageProductListXmlFile = "products_orig.xml"
+
+	URL_PREFIX = "https://x.x.x.x"
+	URL_PREFIX_DEBUG = "https://x.x.x.x/debug"
+
+	SgwHardwareName = "test"
+	SgwProjectUUID = "180001"
+	SgwProductName = "test"
+
 )
 
 
@@ -41,6 +51,12 @@ var ReleaseVersion int
 var IsForDebug bool
 var DstOtaPkgPath string
 
+var HsFileName string
+var CmbsFileName string
+var KernelFileName string
+var RootfsFileName string 
+var ScriptFileName string
+var VerboseLog bool
 
 func ShowVersion(){
 	log.Println("SGW OTA pkg Pack Tool ", ToolVersion)

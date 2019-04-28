@@ -9,6 +9,7 @@ import (
 	"strconv"
 	"strings"
 	"io/ioutil"
+	"time"
 )
 
 
@@ -116,7 +117,7 @@ func CreateDirectoryPerRegion(){
 
 	otaDirPath += strconv.Itoa(ReleaseVersion)
 
-	log.Println("otaDirPath is", otaDirPath)
+	log.Println("Dest OtaDirPath is", otaDirPath)
 
 	err := createDirectory(otaDirPath)
 
@@ -282,31 +283,33 @@ func DoPreImagePack() bool {
     for _, f := range files {
     	
         if strings.HasPrefix(f.Name(), CmbsPrefixString) {
-        	log.Println("Pre-Pack-->",f.Name())
         	tmpFileName = f.Name()
         	tmpFileType = "cmbs"
+        	CmbsFileName = tmpFileName
         }else if strings.Contains(f.Name(), HandsetPrefixString){
-        	log.Println("Pre-Pack-->",f.Name())
         	tmpFileName = f.Name()
         	tmpFileType = "handset"
+        	HsFileName = tmpFileName
         }else if strings.HasPrefix(f.Name(), BaseKernelPrefixString) {
-        	log.Println("Pre-Pack-->",f.Name())
         	tmpFileName = f.Name()
         	tmpFileType = "boot"
+        	KernelFileName = tmpFileName
         }else if strings.HasPrefix(f.Name(), BaseRootfsPrefixString) {
-        	log.Println("Pre-Pack-->",f.Name())
         	tmpFileName = f.Name()
         	tmpFileType = "rootfs"
+        	RootfsFileName = tmpFileName
         }else if strings.HasPrefix(f.Name(), ScriptName) {
-        	log.Println("Pre-Pack-->",f.Name())
         	tmpFileName = f.Name()
         	tmpFileType = "script"
+        	ScriptFileName = tmpFileName
         }else {
         	continue
         }               
 
         if tmpFileType != "" && tmpFileName != "" {
         	
+        	log.Println("Packing==>", tmpFileName)
+
         	outPackedFileName := DstOtaPkgPath + "/" + tmpFileName + "_packed"
 
         	cmdString := HelperToolPackImg + " " + PackTargetName + " " + tmpFileType + " " + DstOtaPkgPath + "/" + tmpFileName + " " + outPackedFileName	
@@ -360,38 +363,223 @@ func DoPreImagePack() bool {
 	return true
 }
 
-
-func GenerateProductXML(){
-
+func check(e error) {
+    if e != nil {
+        panic(e)
+    }
 }
 
 
-func DoPostImagePack(){
+func generateProductXML(pkgDirPrefix string, urlPrefixString string) bool {
+	CurrentLocalTime := time.Now()
 
+	//log.Println("Current local time is", CurrentLocalTime)
+	//Year := CurrentLocalTime.Year()
+	//Mon := CurrentLocalTime.Month()
+	//Day := CurrentLocalTime.Day()
+	
+	Year, Mon, Day := CurrentLocalTime.Date()
+
+	//TimeTagString := strconv.Itoa(Year) + strconv.Itoa(int(Mon)) + strconv.Itoa(Day)
+	TimeTagString := fmt.Sprintf("%04d%02d%02d", Year, int(Mon), Day)
+	log.Println("Current local time is", TimeTagString)
+
+	productXMLFile := DstOtaPkgPath + "/" + PackageProductionXmlFile
+
+    f, err := os.Create(productXMLFile)
+    check(err)
+ 	
+ 	defer func (){
+ 		f.Sync()
+ 		f.Close()
+	}()
+
+ 	var writeBuffer string 
+
+ 	writeBuffer = "<?xml version=\"1.0\" encoding=\"ISO-8859-1\" ?>\n"
+ 	f.WriteString(writeBuffer)
+
+ 	writeBuffer = "<product>\n"
+	f.WriteString(writeBuffer)
+
+	writeBuffer = fmt.Sprintf("<major-version>%s</major-version>\n", TimeTagString)
+	f.WriteString(writeBuffer)
+
+	writeBuffer = fmt.Sprintf("<md5-url>%s/%s/%d/md5.txt</md5-url>\n", urlPrefixString, pkgDirPrefix, ReleaseVersion)
+	f.WriteString(writeBuffer)
+
+	writeBuffer = fmt.Sprintf("<ver-url>%s/%s/%d/version.txt</ver-url>\n", urlPrefixString, pkgDirPrefix, ReleaseVersion)
+	f.WriteString(writeBuffer)
+
+	//hs
+	writeBuffer = fmt.Sprintf("<image-handset>%s/%s/%d/%s</image-handset>\n", urlPrefixString, pkgDirPrefix, ReleaseVersion, HsFileName)
+	f.WriteString(writeBuffer)
+
+	//cmbs
+	writeBuffer = fmt.Sprintf("<image-cmbs>%s/%s/%d/%s</image-cmbs>\n", urlPrefixString, pkgDirPrefix, ReleaseVersion, CmbsFileName)
+	f.WriteString(writeBuffer)
+
+	//kernel
+	writeBuffer = fmt.Sprintf("<image-kernel>%s/%s/%d/%s</image-kernel>\n", urlPrefixString, pkgDirPrefix, ReleaseVersion, KernelFileName)
+	f.WriteString(writeBuffer)
+
+	//rootfs
+	writeBuffer = fmt.Sprintf("<image-rootfs>%s/%s/%d/%s</image-rootfs>\n", urlPrefixString, pkgDirPrefix, ReleaseVersion, RootfsFileName)
+	f.WriteString(writeBuffer)
+
+	//script 
+	writeBuffer = fmt.Sprintf("<image-script>%s/%s/%d/%s</image-script>\n", urlPrefixString, pkgDirPrefix, ReleaseVersion, ScriptFileName)
+	f.WriteString(writeBuffer)
+
+	f.WriteString("</product>\n")
+
+	return true
 }
 
 
-func DoFinallyFileZip(){
+func generateProductListXML(pkgDirPrefix string, urlPrefixString string) bool {
+	var writeBuffer string 
 
+	productListXMLFile := DstOtaPkgPath + "/../" + PackageProductListXmlFile
+
+    f, err := os.Create(productListXMLFile)
+    check(err)
+
+ 	defer func (){
+ 		f.Sync()
+ 		f.Close()
+	}()
+
+
+	writeBuffer = "<?xml version=\"1.0\" encoding=\"ISO-8859-1\" ?>\n"
+	f.WriteString(writeBuffer)
+
+	f.WriteString("<productList>\n")
+
+	f.WriteString("<product>\n")
+	
+	writeBuffer = fmt.Sprintf("<productid>%s</productid>\n", SgwProductName);
+	f.WriteString(writeBuffer)
+
+	writeBuffer = fmt.Sprintf("<hardwareversion>%s</hardwareversion>\n", SgwHardwareName);
+	f.WriteString(writeBuffer)
+
+	writeBuffer = fmt.Sprintf("<UUID>%s</UUID>\n", SgwProjectUUID);
+	f.WriteString(writeBuffer)
+
+	writeBuffer = fmt.Sprintf("<major-url>%s/%s/%d/%s</major-url>\n", urlPrefixString, pkgDirPrefix, ReleaseVersion, PackageProductionXmlFile);
+	f.WriteString(writeBuffer)
+
+	f.WriteString("</product>\n")
+
+	f.WriteString("</productList>\n")
+
+	return true
+}
+
+
+func GenerateProductXML() bool {
+ 	var pkgDirPrefix, urlPrefixString string
+
+ 	if Region == "EU" {
+ 		pkgDirPrefix = PackTargetName + "/" + Region	
+ 	}else{
+ 		pkgDirPrefix = PackTargetName
+ 	}
+
+	if IsForDebug {
+		urlPrefixString = URL_PREFIX_DEBUG
+	}else{
+		urlPrefixString = URL_PREFIX
+	}
+
+	generateProductXML(pkgDirPrefix, urlPrefixString)
+	generateProductListXML(pkgDirPrefix, urlPrefixString)
+
+	return true
+}
+
+
+func DoImagePackRsaEnc() bool {
+	var cmdString string 
+	cmdString = fmt.Sprintf("%s -encrypt -in %s/%s -inkey %s -pubin -out %s/product.xml", HelperToolRsaFile, DstOtaPkgPath, PackageProductionXmlFile, HelperRsaPublicKeyFile, DstOtaPkgPath)
+	
+	log.Println(cmdString)
+	succ := ExecuteSystemCommand(cmdString)
+	if succ != true {
+		log.Println(cmdString, "Failed")
+		return false
+	}  
+
+	cmdString = fmt.Sprintf("%s -encrypt -in %s/../%s -inkey %s -pubin -out %s/../products.xml", HelperToolRsaFile, DstOtaPkgPath, PackageProductListXmlFile, HelperRsaPublicKeyFile, DstOtaPkgPath)
+	log.Println(cmdString)
+	succ = ExecuteSystemCommand(cmdString)
+	if succ != true {
+		log.Println(cmdString, "Failed")
+		return false
+	}  
+
+	return true
+}
+
+
+func DoFinallyFileZip() bool {
+	var finallyOutputZipFileName string 
+
+	if IsForDebug {
+		finallyOutputZipFileName = fmt.Sprintf("%s/%s_ota_v%04d_debug_%s.zip", ConfigOutputOtaPackageDir, PackTargetName, ReleaseVersion, Region)
+	}else{
+		finallyOutputZipFileName = fmt.Sprintf("%s/%s_ota_v%04d_%s.zip", ConfigOutputOtaPackageDir, PackTargetName, ReleaseVersion, Region)
+	}
+	
+	log.Println("Zip file ", finallyOutputZipFileName)
+
+	cmdString := fmt.Sprintf("rm -fr %s ; zip -r %s %s/*", finallyOutputZipFileName, finallyOutputZipFileName, PackTargetName)
+	log.Println(cmdString)
+	succ := ExecuteSystemCommand(cmdString)
+	if succ != true {
+		log.Println(cmdString, "Failed")
+		return false
+	}  
+
+	return true
 }
 
 
 func DoPack() {
 	log.Println("Doing task")
+	var succ bool 
 
 	CreateDirectoryPerRegion()
 
-	CopyFiles()
+	if 0 != CopyFiles() {
+		log.Fatal("Copy files Failed");
+	}
 	
 	GenerateVersionFile()
 
-	DoPreImagePack()
+	succ = DoPreImagePack()
+	if succ != true {
+		log.Fatal("DoPreImagePack Failed");
+	}
 
-	GenerateProductXML()
-	
-	DoPostImagePack()
+	succ = GenerateProductXML()
+	if succ != true {
+		log.Fatal("GenerateProductXML Failed");
+	}
 
-	DoFinallyFileZip()
+	succ = DoImagePackRsaEnc()
+	if succ != true {
+		log.Fatal("DoImagePackRsaEnc Failed");
+	}
+
+	succ = DoFinallyFileZip()
+	if succ != true {
+		log.Fatal("DoPostImagePack Failed");
+	}	
+
+
+	log.Println("Great, Successfully to pack OTA image !!")
 }
 
 
