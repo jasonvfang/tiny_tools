@@ -6,7 +6,7 @@ import (
 	"os"
 	"os/exec"
 	"sort"
-	"strconv"
+	//"strconv"
 	"strings"
 	"io/ioutil"
 	"time"
@@ -25,41 +25,51 @@ func createDirectory(dirPath string) error {
 
 
 func Prepare() {
+	log.Println("[1]Prepare:")
 	log.Println("1.Please enter the build Region (US | EU | AU):")
-	fmt.Scanln(&Region)
+	fmt.Scanln(&GlobalRelease.region)
 
-	log.Println("2.Please enter the build release(45 etc):")
-	fmt.Scanln(&ReleaseVersion)
+	log.Println("2.Please enter R18 release(50 | 50.2 etc):")
+	fmt.Scanln(&GlobalRelease.r18ReleaseNum)
 
-	log.Println("3.Is it for Debug(true | false):")
-	fmt.Scanln(&IsForDebug)
+	log.Println("3.Please enter cmbs release(50 | 50.2 etc):")
+	fmt.Scanln(&GlobalRelease.cmbsReleaseNum)
+
+	log.Println("4.Please enter handset release(37 etc):")
+	fmt.Scanln(&GlobalRelease.handsetReleaseNum)
+
+	log.Println("5.Is it for Debug(true | false):")
+	fmt.Scanln(&GlobalRelease.IsForDebug)
 
 	//To confirm
-	if len(Region) == 0 {
+	if len(GlobalRelease.region) == 0 {
 		log.Println("Region is not Specified, Exit !!")
 		os.Exit(1)
 	}
 
 	RegionList := []string{"EU", "US", "AU"}
-	Region = strings.ToUpper(Region)
+	GlobalRelease.region = strings.ToUpper(GlobalRelease.region)
 
-	i := sort.Search(len(RegionList), func(i int) bool { return Region <= RegionList[i] })
+	i := sort.Search(len(RegionList), func(i int) bool { return GlobalRelease.region <= RegionList[i] })
 
 	if i >= len(RegionList) {
 		log.Println("Invalid Region, We support AU/US/EU only, Exit !!")
 		os.Exit(1)
 	}
 
-	if ReleaseVersion <= 0 {
+	if GlobalRelease.r18ReleaseNum <= 0 {
 		log.Println("Release is not Specified, Exit !!")
 		os.Exit(1)
 	}
 
 	log.Println("\n\n================Confirmation===========")
-	log.Println("Region=", Region)
-	log.Println("Version=", ReleaseVersion)
-	log.Println("isDebug=", IsForDebug)
-	log.Println("\n=======================================\n")
+	log.Println("Region=", GlobalRelease.region)
+	log.Println("R18Version=", GlobalRelease.r18ReleaseNum)
+	log.Println("CmbsVersion=", GlobalRelease.cmbsReleaseNum)
+	log.Println("HandsetVersion=", GlobalRelease.handsetReleaseNum)
+	log.Println("isDebug=", GlobalRelease.IsForDebug)
+	fmt.Println()
+	log.Println("=======================================\n")
 
 }
 
@@ -88,6 +98,8 @@ func ExecuteSystemCommand(cmdString string) bool {
 
 	//append cmd
 	shOptionList = append(shOptionList,cmdString)
+	
+	log.Println(cmdString)
 
 	//Create command but not started yet
 	cmd := exec.Command(shCmdString, shOptionList...)
@@ -106,16 +118,15 @@ func ExecuteSystemCommand(cmdString string) bool {
 
 func CreateDirectoryPerRegion(){
 	var otaDirPath string
-
-	otaDirPath = RootOtaDirNam + "/"
 	
-	os.RemoveAll(otaDirPath)
+	os.RemoveAll(PackTargetName)
 
-	if Region == "EU" {
-		otaDirPath += "EU/"
+	if GlobalRelease.region == "EU" {
+		//otaDirPath += "EU/"
+		otaDirPath = fmt.Sprintf("%s/EU/%.1f", RootOtaDirNam, GlobalRelease.r18ReleaseNum)
+	}else {
+		otaDirPath = fmt.Sprintf("%s/%f", RootOtaDirNam, GlobalRelease.r18ReleaseNum)
 	}
-
-	otaDirPath += strconv.Itoa(ReleaseVersion)
 
 	log.Println("Dest OtaDirPath is", otaDirPath)
 
@@ -164,7 +175,7 @@ func GetCorrectHsFileName()string {
 
     for _, f := range files {
         //log.Println(f.Name())
-        if strings.HasSuffix(f.Name(), Region) {
+        if strings.HasSuffix(f.Name(), GlobalRelease.region) {
         	hsFileName = f.Name()
         	break
         }
@@ -178,7 +189,7 @@ func GetCorrectR18FileName()string {
 	var r18FileName string
 
 
-	if IsForDebug == true {
+	if GlobalRelease.IsForDebug == true {
 		r18FileName = (ConfigDebugR18ImgDir)
 	}else{
 		r18FileName = (ConfigReleaseR18ImgDir)
@@ -201,7 +212,10 @@ func CopyFiles() int{
 	log.Println("Current direcotry:", CurrentDir)
 
 	//1.cmbs
-	cmbsPostString := "V00" + strconv.Itoa(ReleaseVersion) + "." + Region
+	//cmbsPostString := "V00" + strconv.Itoa(GlobalRelease.r18ReleaseNum) + "." + GlobalRelease.region
+	
+	cmbsPostString := fmt.Sprintf("V00%.f.%s", GlobalRelease.cmbsReleaseNum, GlobalRelease.region)
+	
 	cmbsFilePath := ConfigCmbsImgDir + CmbsPrefixString + cmbsPostString + "/*"
 	
 	cmdString := CpCmd + cmbsFilePath + " " + DstOtaPkgPath
@@ -313,7 +327,7 @@ func DoPreImagePack() bool {
         	outPackedFileName := DstOtaPkgPath + "/" + tmpFileName + "_packed"
 
         	cmdString := HelperToolPackImg + " " + PackTargetName + " " + tmpFileType + " " + DstOtaPkgPath + "/" + tmpFileName + " " + outPackedFileName	
-        	log.Println(cmdString)
+        	//log.Println(cmdString)
 			succ := ExecuteSystemCommand(cmdString)
 			if succ != true {
 				log.Println(cmdString, "Failed")
@@ -321,7 +335,7 @@ func DoPreImagePack() bool {
 			}        	
 
 			cmdString = HelperToolOpenSSL + " " + "enc -e -aes-128-cbc -kfile " + HelperAESKeyFile + " -in " + outPackedFileName + " -out " + DstOtaPkgPath + "/" + tmpFileName
-			log.Println(cmdString)
+			//log.Println(cmdString)
 			succ = ExecuteSystemCommand(cmdString)
 			if succ != true {
 				log.Println(cmdString, "Failed")
@@ -329,7 +343,7 @@ func DoPreImagePack() bool {
 			}   
 
 			cmdString = "rm -rf " + outPackedFileName
-			log.Println(cmdString)
+			//log.Println(cmdString)
 			succ = ExecuteSystemCommand(cmdString)
 			if succ != true {
 				log.Println(cmdString, "Failed")
@@ -345,7 +359,7 @@ func DoPreImagePack() bool {
 
     //Generate MD5 
     cmdString := "cd " + DstOtaPkgPath + ";" + "md5sum * > md5.txt"
-	log.Println(cmdString)
+	//log.Println(cmdString)
 	succ := ExecuteSystemCommand(cmdString)
 	if succ != true {
 		log.Println(cmdString, "Failed")
@@ -353,7 +367,7 @@ func DoPreImagePack() bool {
 	}   		
 	
 	cmdString = "cp -fr " + ReleaseLinkplaySdkVerFile + " " + DstOtaPkgPath
-	log.Println(cmdString)
+	//log.Println(cmdString)
 	succ = ExecuteSystemCommand(cmdString)
 	if succ != true {
 		log.Println(cmdString, "Failed")
@@ -405,30 +419,30 @@ func generateProductXML(pkgDirPrefix string, urlPrefixString string) bool {
 	writeBuffer = fmt.Sprintf("<major-version>%s</major-version>\n", TimeTagString)
 	f.WriteString(writeBuffer)
 
-	writeBuffer = fmt.Sprintf("<md5-url>%s/%s/%d/md5.txt</md5-url>\n", urlPrefixString, pkgDirPrefix, ReleaseVersion)
+	writeBuffer = fmt.Sprintf("<md5-url>%s/%s/%0.1f/md5.txt</md5-url>\n", urlPrefixString, pkgDirPrefix, GlobalRelease.r18ReleaseNum)
 	f.WriteString(writeBuffer)
 
-	writeBuffer = fmt.Sprintf("<ver-url>%s/%s/%d/version.txt</ver-url>\n", urlPrefixString, pkgDirPrefix, ReleaseVersion)
+	writeBuffer = fmt.Sprintf("<ver-url>%s/%s/%0.1f/version.txt</ver-url>\n", urlPrefixString, pkgDirPrefix, GlobalRelease.r18ReleaseNum)
 	f.WriteString(writeBuffer)
 
 	//hs
-	writeBuffer = fmt.Sprintf("<image-handset>%s/%s/%d/%s</image-handset>\n", urlPrefixString, pkgDirPrefix, ReleaseVersion, HsFileName)
+	writeBuffer = fmt.Sprintf("<image-handset>%s/%s/%0.1f/%s</image-handset>\n", urlPrefixString, pkgDirPrefix, GlobalRelease.r18ReleaseNum, HsFileName)
 	f.WriteString(writeBuffer)
 
 	//cmbs
-	writeBuffer = fmt.Sprintf("<image-cmbs>%s/%s/%d/%s</image-cmbs>\n", urlPrefixString, pkgDirPrefix, ReleaseVersion, CmbsFileName)
+	writeBuffer = fmt.Sprintf("<image-cmbs>%s/%s/%0.1f/%s</image-cmbs>\n", urlPrefixString, pkgDirPrefix, GlobalRelease.r18ReleaseNum, CmbsFileName)
 	f.WriteString(writeBuffer)
 
 	//kernel
-	writeBuffer = fmt.Sprintf("<image-kernel>%s/%s/%d/%s</image-kernel>\n", urlPrefixString, pkgDirPrefix, ReleaseVersion, KernelFileName)
+	writeBuffer = fmt.Sprintf("<image-kernel>%s/%s/%0.1f/%s</image-kernel>\n", urlPrefixString, pkgDirPrefix, GlobalRelease.r18ReleaseNum, KernelFileName)
 	f.WriteString(writeBuffer)
 
 	//rootfs
-	writeBuffer = fmt.Sprintf("<image-rootfs>%s/%s/%d/%s</image-rootfs>\n", urlPrefixString, pkgDirPrefix, ReleaseVersion, RootfsFileName)
+	writeBuffer = fmt.Sprintf("<image-rootfs>%s/%s/%0.1f/%s</image-rootfs>\n", urlPrefixString, pkgDirPrefix, GlobalRelease.r18ReleaseNum, RootfsFileName)
 	f.WriteString(writeBuffer)
 
 	//script 
-	writeBuffer = fmt.Sprintf("<image-script>%s/%s/%d/%s</image-script>\n", urlPrefixString, pkgDirPrefix, ReleaseVersion, ScriptFileName)
+	writeBuffer = fmt.Sprintf("<image-script>%s/%s/%0.1f/%s</image-script>\n", urlPrefixString, pkgDirPrefix, GlobalRelease.r18ReleaseNum, ScriptFileName)
 	f.WriteString(writeBuffer)
 
 	f.WriteString("</product>\n")
@@ -467,7 +481,7 @@ func generateProductListXML(pkgDirPrefix string, urlPrefixString string) bool {
 	writeBuffer = fmt.Sprintf("<UUID>%s</UUID>\n", SgwProjectUUID);
 	f.WriteString(writeBuffer)
 
-	writeBuffer = fmt.Sprintf("<major-url>%s/%s/%d/%s</major-url>\n", urlPrefixString, pkgDirPrefix, ReleaseVersion, PackageProductionXmlFile);
+	writeBuffer = fmt.Sprintf("<major-url>%s/%s/%0.1f/%s</major-url>\n", urlPrefixString, pkgDirPrefix, GlobalRelease.r18ReleaseNum, PackageProductionXmlFile);
 	f.WriteString(writeBuffer)
 
 	f.WriteString("</product>\n")
@@ -481,13 +495,13 @@ func generateProductListXML(pkgDirPrefix string, urlPrefixString string) bool {
 func GenerateProductXML() bool {
  	var pkgDirPrefix, urlPrefixString string
 
- 	if Region == "EU" {
- 		pkgDirPrefix = PackTargetName + "/" + Region	
+ 	if GlobalRelease.region == "EU" {
+ 		pkgDirPrefix = PackTargetName + "/" + GlobalRelease.region	
  	}else{
  		pkgDirPrefix = PackTargetName
  	}
 
-	if IsForDebug {
+	if GlobalRelease.IsForDebug {
 		urlPrefixString = URL_PREFIX_DEBUG
 	}else{
 		urlPrefixString = URL_PREFIX
@@ -504,7 +518,7 @@ func DoImagePackRsaEnc() bool {
 	var cmdString string 
 	cmdString = fmt.Sprintf("%s -encrypt -in %s/%s -inkey %s -pubin -out %s/product.xml", HelperToolRsaFile, DstOtaPkgPath, PackageProductionXmlFile, HelperRsaPublicKeyFile, DstOtaPkgPath)
 	
-	log.Println(cmdString)
+	//log.Println(cmdString)
 	succ := ExecuteSystemCommand(cmdString)
 	if succ != true {
 		log.Println(cmdString, "Failed")
@@ -512,7 +526,7 @@ func DoImagePackRsaEnc() bool {
 	}  
 
 	cmdString = fmt.Sprintf("%s -encrypt -in %s/../%s -inkey %s -pubin -out %s/../products.xml", HelperToolRsaFile, DstOtaPkgPath, PackageProductListXmlFile, HelperRsaPublicKeyFile, DstOtaPkgPath)
-	log.Println(cmdString)
+	//log.Println(cmdString)
 	succ = ExecuteSystemCommand(cmdString)
 	if succ != true {
 		log.Println(cmdString, "Failed")
@@ -524,18 +538,19 @@ func DoImagePackRsaEnc() bool {
 
 
 func DoFinallyFileZip() bool {
+	
 	var finallyOutputZipFileName string 
 
-	if IsForDebug {
-		finallyOutputZipFileName = fmt.Sprintf("%s/%s_ota_v%04d_debug_%s.zip", ConfigOutputOtaPackageDir, PackTargetName, ReleaseVersion, Region)
+	if GlobalRelease.IsForDebug {
+		finallyOutputZipFileName = fmt.Sprintf("%s/%s_ota_v00%0.1f_debug_%s.zip", ConfigOutputOtaPackageDir, PackTargetName, GlobalRelease.r18ReleaseNum, GlobalRelease.region)
 	}else{
-		finallyOutputZipFileName = fmt.Sprintf("%s/%s_ota_v%04d_%s.zip", ConfigOutputOtaPackageDir, PackTargetName, ReleaseVersion, Region)
+		finallyOutputZipFileName = fmt.Sprintf("%s/%s_ota_v00%0.1f_%s.zip", ConfigOutputOtaPackageDir, PackTargetName, GlobalRelease.r18ReleaseNum, GlobalRelease.region)
 	}
 	
 	log.Println("Zip file ", finallyOutputZipFileName)
 
 	cmdString := fmt.Sprintf("rm -fr %s ; zip -r %s %s/*", finallyOutputZipFileName, finallyOutputZipFileName, PackTargetName)
-	log.Println(cmdString)
+	//log.Println(cmdString)
 	succ := ExecuteSystemCommand(cmdString)
 	if succ != true {
 		log.Println(cmdString, "Failed")
@@ -552,10 +567,14 @@ func DoPack() {
 
 	CreateDirectoryPerRegion()
 
+	log.Println("[2]COPY Files:")
+
 	if 0 != CopyFiles() {
 		log.Fatal("Copy files Failed");
 	}
 	
+	log.Println("[3]Pack Files:")
+
 	GenerateVersionFile()
 
 	succ = DoPreImagePack()
@@ -572,6 +591,8 @@ func DoPack() {
 	if succ != true {
 		log.Fatal("DoImagePackRsaEnc Failed");
 	}
+	
+	log.Println("[4]ZIP Files:")
 
 	succ = DoFinallyFileZip()
 	if succ != true {

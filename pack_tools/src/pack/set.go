@@ -5,7 +5,7 @@ import (
 )
 
 const (
-	ToolVersion = "v0.1"
+	ToolVersion = "v0.2"
 	PackTargetName = "sgw_avs"
 	RootOtaDirNam = PackTargetName
 	CmbsPrefixString = "Alexa_DCX81_MOD_"
@@ -36,19 +36,26 @@ const (
 	PackageProductionXmlFile = "product_orig.xml"
 	PackageProductListXmlFile = "products_orig.xml"
 
-	URL_PREFIX = "https://x.x.x.x"
-	URL_PREFIX_DEBUG = "https://x.x.x.x/debug"
+	URL_PREFIX = "https://otasgw.linkplay.com"
+	URL_PREFIX_DEBUG = "https://otasgw.linkplay.com/sgw_avs_debug"
 
-	SgwHardwareName = "test"
-	SgwProjectUUID = "180001"
-	SgwProductName = "test"
+	SgwHardwareName = "WiiMu-R18"
+	SgwProjectUUID = "FF180001"
+	SgwProductName = "SGW"
 
 )
 
 
-var Region string
-var ReleaseVersion int
-var IsForDebug bool
+type releaseInfo struct{
+	region string
+	r18ReleaseNum float32
+	cmbsReleaseNum float32
+	handsetReleaseNum float32
+	IsForDebug bool
+}
+
+var GlobalRelease releaseInfo
+
 var DstOtaPkgPath string
 
 var HsFileName string
