@@ -32,7 +32,7 @@ func Prepare() {
 	log.Println("2.Please enter R18 release(50 | 50.2 etc):")
 	fmt.Scanln(&GlobalRelease.r18ReleaseNum)
 
-	log.Println("3.Please enter cmbs release(50 | 50.2 etc):")
+	log.Println("3.Please enter cmbs release(50 etc):")
 	fmt.Scanln(&GlobalRelease.cmbsReleaseNum)
 
 	log.Println("4.Please enter handset release(37 etc):")
@@ -62,14 +62,16 @@ func Prepare() {
 		os.Exit(1)
 	}
 
+	GlobalRelease.r18ReleaseShort = int(GlobalRelease.r18ReleaseNum)
+
 	log.Println("\n\n================Confirmation===========")
 	log.Println("Region=", GlobalRelease.region)
 	log.Println("R18Version=", GlobalRelease.r18ReleaseNum)
+	log.Println("r18ReleaseShort=", GlobalRelease.r18ReleaseShort)
 	log.Println("CmbsVersion=", GlobalRelease.cmbsReleaseNum)
 	log.Println("HandsetVersion=", GlobalRelease.handsetReleaseNum)
 	log.Println("isDebug=", GlobalRelease.IsForDebug)
-	fmt.Println()
-	log.Println("=======================================\n")
+	log.Println("======================\n")
 
 }
 
@@ -123,9 +125,18 @@ func CreateDirectoryPerRegion(){
 
 	if GlobalRelease.region == "EU" {
 		//otaDirPath += "EU/"
-		otaDirPath = fmt.Sprintf("%s/EU/%.1f", RootOtaDirNam, GlobalRelease.r18ReleaseNum)
+		if GlobalRelease.r18ReleaseNum == float32(GlobalRelease.r18ReleaseShort) {
+			otaDirPath = fmt.Sprintf("%s/EU/%d", RootOtaDirNam, GlobalRelease.r18ReleaseShort)
+		}else{
+			otaDirPath = fmt.Sprintf("%s/EU/%.1f", RootOtaDirNam, GlobalRelease.r18ReleaseNum)
+		}
+		
 	}else {
-		otaDirPath = fmt.Sprintf("%s/%f", RootOtaDirNam, GlobalRelease.r18ReleaseNum)
+		if GlobalRelease.r18ReleaseNum == float32(GlobalRelease.r18ReleaseShort) {
+			otaDirPath = fmt.Sprintf("%s/%d", RootOtaDirNam, GlobalRelease.r18ReleaseShort)
+		}else{
+			otaDirPath = fmt.Sprintf("%s/%.1f", RootOtaDirNam, GlobalRelease.r18ReleaseNum)
+		}
 	}
 
 	log.Println("Dest OtaDirPath is", otaDirPath)
@@ -214,7 +225,14 @@ func CopyFiles() int{
 	//1.cmbs
 	//cmbsPostString := "V00" + strconv.Itoa(GlobalRelease.r18ReleaseNum) + "." + GlobalRelease.region
 	
-	cmbsPostString := fmt.Sprintf("V00%.f.%s", GlobalRelease.cmbsReleaseNum, GlobalRelease.region)
+	var shortCmbsReleaseNum = int(GlobalRelease.cmbsReleaseNum)
+	var cmbsPostString string
+
+	if float32(shortCmbsReleaseNum) == GlobalRelease.cmbsReleaseNum {
+		cmbsPostString = fmt.Sprintf("V00%d.%s", shortCmbsReleaseNum, GlobalRelease.region)
+	}else{
+		cmbsPostString = fmt.Sprintf("V00%1f.%s", GlobalRelease.cmbsReleaseNum, GlobalRelease.region)
+	}
 	
 	cmbsFilePath := ConfigCmbsImgDir + CmbsPrefixString + cmbsPostString + "/*"
 	
@@ -419,32 +437,61 @@ func generateProductXML(pkgDirPrefix string, urlPrefixString string) bool {
 	writeBuffer = fmt.Sprintf("<major-version>%s</major-version>\n", TimeTagString)
 	f.WriteString(writeBuffer)
 
-	writeBuffer = fmt.Sprintf("<md5-url>%s/%s/%0.1f/md5.txt</md5-url>\n", urlPrefixString, pkgDirPrefix, GlobalRelease.r18ReleaseNum)
-	f.WriteString(writeBuffer)
+	if GlobalRelease.r18ReleaseNum == float32(GlobalRelease.r18ReleaseShort) {
+		writeBuffer = fmt.Sprintf("<md5-url>%s/%s/%d/md5.txt</md5-url>\n", urlPrefixString, pkgDirPrefix, GlobalRelease.r18ReleaseShort)
+		f.WriteString(writeBuffer)
 
-	writeBuffer = fmt.Sprintf("<ver-url>%s/%s/%0.1f/version.txt</ver-url>\n", urlPrefixString, pkgDirPrefix, GlobalRelease.r18ReleaseNum)
-	f.WriteString(writeBuffer)
+		writeBuffer = fmt.Sprintf("<ver-url>%s/%s/%d/version.txt</ver-url>\n", urlPrefixString, pkgDirPrefix, GlobalRelease.r18ReleaseShort)
+		f.WriteString(writeBuffer)
 
-	//hs
-	writeBuffer = fmt.Sprintf("<image-handset>%s/%s/%0.1f/%s</image-handset>\n", urlPrefixString, pkgDirPrefix, GlobalRelease.r18ReleaseNum, HsFileName)
-	f.WriteString(writeBuffer)
+		//hs
+		writeBuffer = fmt.Sprintf("<image-handset>%s/%s/%d/%s</image-handset>\n", urlPrefixString, pkgDirPrefix, GlobalRelease.r18ReleaseShort, HsFileName)
+		f.WriteString(writeBuffer)
 
-	//cmbs
-	writeBuffer = fmt.Sprintf("<image-cmbs>%s/%s/%0.1f/%s</image-cmbs>\n", urlPrefixString, pkgDirPrefix, GlobalRelease.r18ReleaseNum, CmbsFileName)
-	f.WriteString(writeBuffer)
+		//cmbs
+		writeBuffer = fmt.Sprintf("<image-cmbs>%s/%s/%d/%s</image-cmbs>\n", urlPrefixString, pkgDirPrefix, GlobalRelease.r18ReleaseShort, CmbsFileName)
+		f.WriteString(writeBuffer)
 
-	//kernel
-	writeBuffer = fmt.Sprintf("<image-kernel>%s/%s/%0.1f/%s</image-kernel>\n", urlPrefixString, pkgDirPrefix, GlobalRelease.r18ReleaseNum, KernelFileName)
-	f.WriteString(writeBuffer)
+		//kernel
+		writeBuffer = fmt.Sprintf("<image-kernel>%s/%s/%d/%s</image-kernel>\n", urlPrefixString, pkgDirPrefix, GlobalRelease.r18ReleaseShort, KernelFileName)
+		f.WriteString(writeBuffer)
 
-	//rootfs
-	writeBuffer = fmt.Sprintf("<image-rootfs>%s/%s/%0.1f/%s</image-rootfs>\n", urlPrefixString, pkgDirPrefix, GlobalRelease.r18ReleaseNum, RootfsFileName)
-	f.WriteString(writeBuffer)
+		//rootfs
+		writeBuffer = fmt.Sprintf("<image-rootfs>%s/%s/%d/%s</image-rootfs>\n", urlPrefixString, pkgDirPrefix, GlobalRelease.r18ReleaseShort, RootfsFileName)
+		f.WriteString(writeBuffer)
 
-	//script 
-	writeBuffer = fmt.Sprintf("<image-script>%s/%s/%0.1f/%s</image-script>\n", urlPrefixString, pkgDirPrefix, GlobalRelease.r18ReleaseNum, ScriptFileName)
-	f.WriteString(writeBuffer)
+		//script 
+		writeBuffer = fmt.Sprintf("<image-script>%s/%s/%d/%s</image-script>\n", urlPrefixString, pkgDirPrefix, GlobalRelease.r18ReleaseShort, ScriptFileName)
+		f.WriteString(writeBuffer)
 
+	}else{
+		writeBuffer = fmt.Sprintf("<md5-url>%s/%s/%0.1f/md5.txt</md5-url>\n", urlPrefixString, pkgDirPrefix, GlobalRelease.r18ReleaseNum)
+		f.WriteString(writeBuffer)
+
+		writeBuffer = fmt.Sprintf("<ver-url>%s/%s/%0.1f/version.txt</ver-url>\n", urlPrefixString, pkgDirPrefix, GlobalRelease.r18ReleaseNum)
+		f.WriteString(writeBuffer)
+
+		//hs
+		writeBuffer = fmt.Sprintf("<image-handset>%s/%s/%0.1f/%s</image-handset>\n", urlPrefixString, pkgDirPrefix, GlobalRelease.r18ReleaseNum, HsFileName)
+		f.WriteString(writeBuffer)
+
+		//cmbs
+		writeBuffer = fmt.Sprintf("<image-cmbs>%s/%s/%0.1f/%s</image-cmbs>\n", urlPrefixString, pkgDirPrefix, GlobalRelease.r18ReleaseNum, CmbsFileName)
+		f.WriteString(writeBuffer)
+
+		//kernel
+		writeBuffer = fmt.Sprintf("<image-kernel>%s/%s/%0.1f/%s</image-kernel>\n", urlPrefixString, pkgDirPrefix, GlobalRelease.r18ReleaseNum, KernelFileName)
+		f.WriteString(writeBuffer)
+
+		//rootfs
+		writeBuffer = fmt.Sprintf("<image-rootfs>%s/%s/%0.1f/%s</image-rootfs>\n", urlPrefixString, pkgDirPrefix, GlobalRelease.r18ReleaseNum, RootfsFileName)
+		f.WriteString(writeBuffer)
+
+		//script 
+		writeBuffer = fmt.Sprintf("<image-script>%s/%s/%0.1f/%s</image-script>\n", urlPrefixString, pkgDirPrefix, GlobalRelease.r18ReleaseNum, ScriptFileName)
+		f.WriteString(writeBuffer)
+	}
+	
 	f.WriteString("</product>\n")
 
 	return true
@@ -481,7 +528,12 @@ func generateProductListXML(pkgDirPrefix string, urlPrefixString string) bool {
 	writeBuffer = fmt.Sprintf("<UUID>%s</UUID>\n", SgwProjectUUID);
 	f.WriteString(writeBuffer)
 
-	writeBuffer = fmt.Sprintf("<major-url>%s/%s/%0.1f/%s</major-url>\n", urlPrefixString, pkgDirPrefix, GlobalRelease.r18ReleaseNum, PackageProductionXmlFile);
+	if GlobalRelease.r18ReleaseNum == float32(GlobalRelease.r18ReleaseShort) {
+		writeBuffer = fmt.Sprintf("<major-url>%s/%s/%d/%s</major-url>\n", urlPrefixString, pkgDirPrefix, GlobalRelease.r18ReleaseShort, PackageProductionXmlFile);
+	}else{
+		writeBuffer = fmt.Sprintf("<major-url>%s/%s/%0.1f/%s</major-url>\n", urlPrefixString, pkgDirPrefix, GlobalRelease.r18ReleaseNum, PackageProductionXmlFile);
+	}
+
 	f.WriteString(writeBuffer)
 
 	f.WriteString("</product>\n")
@@ -542,7 +594,11 @@ func DoFinallyFileZip() bool {
 	var finallyOutputZipFileName string 
 
 	if GlobalRelease.IsForDebug {
-		finallyOutputZipFileName = fmt.Sprintf("%s/%s_ota_v00%0.1f_debug_%s.zip", ConfigOutputOtaPackageDir, PackTargetName, GlobalRelease.r18ReleaseNum, GlobalRelease.region)
+		if GlobalRelease.r18ReleaseNum == float32(GlobalRelease.r18ReleaseShort){
+			finallyOutputZipFileName = fmt.Sprintf("%s/%s_ota_v00%d_debug_%s.zip", ConfigOutputOtaPackageDir, PackTargetName, GlobalRelease.r18ReleaseShort, GlobalRelease.region)	
+		}else{
+			finallyOutputZipFileName = fmt.Sprintf("%s/%s_ota_v00%0.1f_debug_%s.zip", ConfigOutputOtaPackageDir, PackTargetName, GlobalRelease.r18ReleaseNum, GlobalRelease.region)		
+		}
 	}else{
 		finallyOutputZipFileName = fmt.Sprintf("%s/%s_ota_v00%0.1f_%s.zip", ConfigOutputOtaPackageDir, PackTargetName, GlobalRelease.r18ReleaseNum, GlobalRelease.region)
 	}

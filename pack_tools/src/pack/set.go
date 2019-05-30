@@ -49,6 +49,7 @@ const (
 type releaseInfo struct{
 	region string
 	r18ReleaseNum float32
+	r18ReleaseShort int
 	cmbsReleaseNum float32
 	handsetReleaseNum float32
 	IsForDebug bool
@@ -66,6 +67,6 @@ var ScriptFileName string
 var VerboseLog bool
 
 func ShowVersion(){
-	log.Println("SGW OTA pkg Pack Tool ", ToolVersion)
+	log.Println("SGW OTA Package Pack Tool ", ToolVersion)
 }
 
