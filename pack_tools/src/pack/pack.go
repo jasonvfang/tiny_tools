@@ -26,7 +26,7 @@ func createDirectory(dirPath string) error {
 
 func Prepare() {
 	log.Println("[1]Prepare:")
-	log.Println("1.Please enter the build Region (US | EU | AU):")
+	log.Println("1.Please enter the build Region (US | EU | G1 | G2):")
 	fmt.Scanln(&GlobalRelease.region)
 
 	log.Println("2.Please enter R18 release(50 | 50.2 etc):")
@@ -47,13 +47,13 @@ func Prepare() {
 		os.Exit(1)
 	}
 
-	RegionList := []string{"EU", "US", "AU"}
+	RegionList := []string{"EU", "US", "AU", "G1", "G2", "G3", "G4", "G5"}
 	GlobalRelease.region = strings.ToUpper(GlobalRelease.region)
 
 	i := sort.Search(len(RegionList), func(i int) bool { return GlobalRelease.region <= RegionList[i] })
 
 	if i >= len(RegionList) {
-		log.Println("Invalid Region, We support AU/US/EU only, Exit !!")
+		log.Println("Invalid Region, We support AU/US/EU/G1-5 only, Exit !!")
 		os.Exit(1)
 	}
 
@@ -123,12 +123,11 @@ func CreateDirectoryPerRegion(){
 	
 	os.RemoveAll(PackTargetName)
 
-	if GlobalRelease.region == "EU" {
-		//otaDirPath += "EU/"
+	if GlobalRelease.region != "US" {
 		if GlobalRelease.r18ReleaseNum == float32(GlobalRelease.r18ReleaseShort) {
-			otaDirPath = fmt.Sprintf("%s/EU/%d", RootOtaDirNam, GlobalRelease.r18ReleaseShort)
+			otaDirPath = fmt.Sprintf("%s/%s/%d", RootOtaDirNam, GlobalRelease.region, GlobalRelease.r18ReleaseShort)
 		}else{
-			otaDirPath = fmt.Sprintf("%s/EU/%.1f", RootOtaDirNam, GlobalRelease.r18ReleaseNum)
+			otaDirPath = fmt.Sprintf("%s/%s/%.1f", RootOtaDirNam, GlobalRelease.region, GlobalRelease.r18ReleaseNum)
 		}
 		
 	}else {
@@ -547,7 +546,7 @@ func generateProductListXML(pkgDirPrefix string, urlPrefixString string) bool {
 func GenerateProductXML() bool {
  	var pkgDirPrefix, urlPrefixString string
 
- 	if GlobalRelease.region == "EU" {
+ 	if GlobalRelease.region != "US" {
  		pkgDirPrefix = PackTargetName + "/" + GlobalRelease.region	
  	}else{
  		pkgDirPrefix = PackTargetName
