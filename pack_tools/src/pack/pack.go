@@ -230,7 +230,7 @@ func CopyFiles() int{
 	if float32(shortCmbsReleaseNum) == GlobalRelease.cmbsReleaseNum {
 		cmbsPostString = fmt.Sprintf("V00%d.%s", shortCmbsReleaseNum, GlobalRelease.region)
 	}else{
-		cmbsPostString = fmt.Sprintf("V00%1f.%s", GlobalRelease.cmbsReleaseNum, GlobalRelease.region)
+		cmbsPostString = fmt.Sprintf("V00%1.1f.%s", GlobalRelease.cmbsReleaseNum, GlobalRelease.region)
 	}
 	
 	cmbsFilePath := ConfigCmbsImgDir + CmbsPrefixString + cmbsPostString + "/*"

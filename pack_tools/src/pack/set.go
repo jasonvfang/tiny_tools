@@ -5,7 +5,7 @@ import (
 )
 
 const (
-	ToolVersion = "v0.3"
+	ToolVersion = "v0.4"
 	PackTargetName = "sgw_avs"
 	RootOtaDirNam = PackTargetName
 	CmbsPrefixString = "Alexa_DCX81_MOD_"
